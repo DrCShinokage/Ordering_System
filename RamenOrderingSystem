@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ramen Ordering System</title>
+    <style>
+        /* Style for the receipt-like window */
+        #receipt {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-top: 20px;
+            max-width: 300px;
+        }
+
+        /* Style to display buttons vertically */
+        button {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<?php
+// Map to store Ramen flavors and their prices in pesos
+$ramenPrices = array(
+    "Shoyu Ramen" => 180.50,   // prices in pesos
+    "Miso Ramen" => 199.90,
+    "Shio Ramen" => 151.92,
+    "Tonkotsu Ramen" => 210.89,
+    "Vegetarian Ramen" => 125.86
+);
+
+// Initialize session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// List to store customer orders
+if (!isset($_SESSION['customerOrders']) || !is_array($_SESSION['customerOrders'])) {
+    $_SESSION['customerOrders'] = array();
+}
+
+// Initialize totalCost variable
+$totalCost = 0;
+
+// Order Ramen
+echo "<h2>Place your order:</h2>";
+echo "<form method='post'>";
+foreach ($ramenPrices as $flavor => $price) {
+    echo "<button type='submit' name='chosenFlavor' value='$flavor'>$flavor - ₱" . number_format($price, 2) . "</button>";
+}
+echo "</form>";
+
+// Process order and handle adding/removing orders
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $chosenFlavor = isset($_POST["chosenFlavor"]) ? $_POST["chosenFlavor"] : '';
+    $action = isset($_POST["action"]) ? $_POST["action"] : '';
+
+    if ($action == "Finish Order") {
+        // Display total order and finish order message
+        echo "<script>alert('Order finished! Total Cost: ₱" . number_format($totalCost, 2) . "');</script>";
+        // Clear the customer orders after finishing
+        $_SESSION['customerOrders'] = array();
+    } elseif (strpos($action, "Remove Order:") === 0) {
+        // Remove the specified order
+        $indexToRemove = substr($action, strlen("Remove Order:"));
+        if (isset($_SESSION['customerOrders'][$indexToRemove])) {
+            unset($_SESSION['customerOrders'][$indexToRemove]);
+            $_SESSION['customerOrders'] = array_values($_SESSION['customerOrders']); // Re-index array
+        }
+    } elseif (array_key_exists($chosenFlavor, $ramenPrices)) {
+        // Add the selected ramen to the customer orders
+        $_SESSION['customerOrders'][] = array('flavor' => $chosenFlavor, 'price' => $ramenPrices[$chosenFlavor]);
+    } else {
+        if ($chosenFlavor !== '') {
+            echo "<p>Invalid choice. Please enter a valid flavor.</p>";
+        }
+    }
+}
+
+// Display receipt-like window with the ability to remove orders and show total order
+echo "<div id='receipt'>";
+foreach ($_SESSION['customerOrders'] as $index => $order) {
+    echo "<div>{$order['flavor']} - ₱" . number_format($order['price'], 2);
+    echo "<form method='post'><button type='submit' name='action' value='Remove Order:$index'>Remove Order</button></form></div>";
+    $totalCost += $order['price'];
+}
+echo "<hr>";
+echo "Total Order: ₱" . number_format($totalCost, 2);
+echo "</div>";
+
+// Finish Order button
+echo "<form method='post'>";
+echo "<input type='submit' name='action' value='Finish Order'>";
+echo "</form>";
+?>
+
+</body>
+</html>
